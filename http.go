@@ -18,6 +18,7 @@ var concurrent = flag.Int("c", 1, "concurrent req")
 var nreqs = flag.Int("n", 800, "total reqs")
 var host = flag.String("h", "localhost:2379", "etcd host")
 var watch = flag.Bool("w", false, "do watch")
+var put = flag.Bool("p", false, "do put")
 
 func main() {
 	log.Println("etcd http benchmark")
@@ -66,40 +67,42 @@ func main() {
 		}()
 	}
 
-	for n := 0; n < *concurrent; n++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			//data := map[string]interface{}{"key":"Zm9v", "value":"YmFy"}
-			data := map[string]interface{}{}
-			for i := 0; i < *nreqs; i++ {
-				data["key"] = base64.StdEncoding.EncodeToString([]byte("foo"))
-				data["value"] = base64.StdEncoding.EncodeToString([]byte("bar"))
-				buf, err := json.Marshal(data)
-				if err != nil {
-					log.Fatal(err)
+	if *put {
+		for n := 0; n < *concurrent; n++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				//data := map[string]interface{}{"key":"Zm9v", "value":"YmFy"}
+				data := map[string]interface{}{}
+				for i := 0; i < *nreqs; i++ {
+					data["key"] = base64.StdEncoding.EncodeToString([]byte("foo"))
+					data["value"] = base64.StdEncoding.EncodeToString([]byte("bar"))
+					buf, err := json.Marshal(data)
+					if err != nil {
+						log.Fatal(err)
+					}
+					buf2 := bytes.NewBuffer(buf)
+					res, err := client.Post(put_url, "application/json", buf2)
+					if err != nil {
+						log.Fatal(err)
+					}
+					body, err := io.ReadAll(res.Body)
+					res.Body.Close()
+					if err != nil {
+						log.Fatal(err)
+					}
+					if res.StatusCode != 200 {
+						log.Fatalf("failed: %+v, body: %+v\n", res, string(body))
+					}
+					var parsed map[string]interface{}
+					err = json.Unmarshal(body, &parsed)
+					if err != nil {
+						log.Fatal(err)
+					}
+					//log.Println(parsed)
 				}
-				buf2 := bytes.NewBuffer(buf)
-				res, err := client.Post(put_url, "application/json", buf2)
-				if err != nil {
-					log.Fatal(err)
-				}
-				body, err := io.ReadAll(res.Body)
-				res.Body.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-				if res.StatusCode != 200 {
-					log.Fatalf("failed: %+v, body: %+v\n", res, string(body))
-				}
-				var parsed map[string]interface{}
-				err = json.Unmarshal(body, &parsed)
-				if err != nil {
-					log.Fatal(err)
-				}
-				//log.Println(parsed)
-			}
-		}()
+			}()
+		}
 	}
 	start := time.Now()
 	wg.Wait()

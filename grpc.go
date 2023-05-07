@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
@@ -51,7 +50,7 @@ func (db *etcd) get(k string) string {
 
 func (db *etcd) init_watch() {
 	db.watcher = clientv3.NewWatcher(db.cli)
-	db.watchChan = db.watcher.Watch(context.Background(), "Zm9v")
+	db.watchChan = db.watcher.Watch(context.Background(), "foo")
 }
 
 func (db *etcd) watch(cnt int) {
@@ -73,6 +72,7 @@ var concurrent = flag.Int("c", 1, "concurrent req")
 var nreqs = flag.Int("n", 800, "total reqs")
 var host = flag.String("h", "http://localhost:2379", "etcd host")
 var watch = flag.Bool("w", false, "do watch")
+var put = flag.Bool("p", false, "do put")
 
 func main() {
 	log.Println("etcd grpc benchmark")
@@ -94,17 +94,24 @@ func main() {
 			cli.watch(cnt)
 		}()
 	}
-	for n := 0; n < *concurrent; n++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < *nreqs; i++ {
-				key := base64.StdEncoding.EncodeToString([]byte("foo"))
-				value := base64.StdEncoding.EncodeToString([]byte("bar"))
-				cli.put(key, value)
-			}
-		}()
+
+	if *put {
+		for n := 0; n < *concurrent; n++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for i := 0; i < *nreqs; i++ {
+					//key := base64.StdEncoding.EncodeToString([]byte("foo"))
+					//value := base64.StdEncoding.EncodeToString([]byte("bar"))
+					key := "foo"
+					value := "bar"
+					//log.Println(key, value)
+					cli.put(key, value)
+				}
+			}()
+		}
 	}
+
 	start := time.Now()
 	wg.Wait()
 	end := time.Now()
