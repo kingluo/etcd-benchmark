@@ -24,15 +24,16 @@ var password = flag.String("password", "", "password")
 
 func main() {
 	log.Println("etcd http benchmark")
+
 	flag.Parse()
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("%-30s: %s\n", f.Usage, f.Value)
 	})
+
 	put_url := fmt.Sprintf("%s/v3/kv/put", *host)
 	watch_url := fmt.Sprintf("%s/v3/watch", *host)
 	auth_url := fmt.Sprintf("%s/v3/auth/authenticate", *host)
 
-	var wg sync.WaitGroup
 	client := &http.Client{}
 
 	var do_auth bool = (*user != "")
@@ -60,6 +61,9 @@ func main() {
 		token = parsed["token"].(string)
 		log.Printf("%-30s: %s\n", "token", token)
 	}
+
+	var wg sync.WaitGroup
+	start := time.Now()
 
 	if *watch {
 		watch_started := make(chan bool)
@@ -141,7 +145,7 @@ func main() {
 			}()
 		}
 	}
-	start := time.Now()
+
 	wg.Wait()
 	end := time.Now()
 	sum := end.Sub(start).Seconds()

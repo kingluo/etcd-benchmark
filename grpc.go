@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -70,8 +69,6 @@ func (db *etcd) watch(cnt int) {
 	}
 }
 
-// https://github.com/golang/go/issues/47840
-
 var concurrent = flag.Int("c", 1, "concurrent req")
 var nreqs = flag.Int("n", 800, "total reqs")
 var host = flag.String("host", "http://localhost:2379", "etcd host")
@@ -82,17 +79,19 @@ var password = flag.String("password", "", "password")
 
 func main() {
 	log.Println("etcd grpc benchmark")
+
 	flag.Parse()
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("%-30s: %s\n", f.Usage, f.Value)
 	})
-	url := fmt.Sprintf("%s/v3/kv/put", *host)
 
-	cli := new_etcd(url, *user, *password)
-	cli.init_watch()
+	cli := new_etcd(*host, *user, *password)
 
 	var wg sync.WaitGroup
+	start := time.Now()
+
 	if *watch {
+		cli.init_watch()
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -107,18 +106,12 @@ func main() {
 			go func() {
 				defer wg.Done()
 				for i := 0; i < *nreqs; i++ {
-					//key := base64.StdEncoding.EncodeToString([]byte("foo"))
-					//value := base64.StdEncoding.EncodeToString([]byte("bar"))
-					key := "foo"
-					value := "bar"
-					//log.Println(key, value)
-					cli.put(key, value)
+					cli.put("foo", "bar")
 				}
 			}()
 		}
 	}
 
-	start := time.Now()
 	wg.Wait()
 	end := time.Now()
 	sum := end.Sub(start).Seconds()
