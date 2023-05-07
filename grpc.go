@@ -17,11 +17,15 @@ type etcd struct {
 	watchChan clientv3.WatchChan
 }
 
-func new_etcd(url string) *etcd {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{url},
-		DialTimeout: 2 * time.Second,
-	})
+func new_etcd(url string, user string, password string) *etcd {
+	cfg := clientv3.Config{
+		Endpoints: []string{url},
+	}
+	if user != "" {
+		cfg.Username = user
+		cfg.Password = password
+	}
+	cli, err := clientv3.New(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -70,9 +74,11 @@ func (db *etcd) watch(cnt int) {
 
 var concurrent = flag.Int("c", 1, "concurrent req")
 var nreqs = flag.Int("n", 800, "total reqs")
-var host = flag.String("h", "http://localhost:2379", "etcd host")
-var watch = flag.Bool("w", false, "do watch")
-var put = flag.Bool("p", false, "do put")
+var host = flag.String("host", "http://localhost:2379", "etcd host")
+var watch = flag.Bool("watch", false, "do watch")
+var put = flag.Bool("put", false, "do put")
+var user = flag.String("user", "", "user")
+var password = flag.String("password", "", "password")
 
 func main() {
 	log.Println("etcd grpc benchmark")
@@ -82,7 +88,7 @@ func main() {
 	})
 	url := fmt.Sprintf("%s/v3/kv/put", *host)
 
-	cli := new_etcd(url)
+	cli := new_etcd(url, *user, *password)
 	cli.init_watch()
 
 	var wg sync.WaitGroup
