@@ -3,7 +3,7 @@ etcd http/grpc performance testing
 
 ## background
 
-How efficiency difference between http and grpc to access etcd?
+What is the difference in the efficiency of accessing etcd with http and grpc respectively?
 
 We use below client programs to do the test:
 1. http [go-http](https://pkg.go.dev/net/http#Client), access etcd grpc gateway, http keepalive enabled
